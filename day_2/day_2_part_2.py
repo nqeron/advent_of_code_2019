@@ -1,6 +1,5 @@
 
 def analyze(file):
-    original_codes = []
     with open(file) as f:
         original_codes = [int(i) for i in f.readline().split(",")]
 
