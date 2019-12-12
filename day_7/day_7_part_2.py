@@ -28,7 +28,8 @@ def run_int_comp(opcodes):
 
         left = get_from_opcodes(opcodes, pos+1, mode_1)
         right = get_from_opcodes(opcodes, pos+2, mode_2)
-        dest = opcodes[pos+3]
+        if len(opcodes) > pos+3:
+            dest = opcodes[pos+3]
 
         if code == "01":
             opcodes[dest] = left + right
@@ -110,14 +111,24 @@ def analyze(file):
             next_d = amp_d.send(next_c)
             out = amp_e.send(next_d)
 
-            if out >= maximum:
-                maximum = out
-            next_a = amp_a.send(out)
-            if next_a is None:
+            # if out >= maximum:
+            #     maximum = out
+
+            try:
+                next(amp_b)
+                next(amp_c)
+                next(amp_d)
+                next(amp_e)
+                next(amp_a)
+            except StopIteration:
+                if out >= maximum:
+                    maximum = out
                 break
+            else:
+                next_a = amp_a.send(out)
 
     print(maximum)
 
 
 if __name__ == '__main__':
-    analyze("../inputs/day_7_test.txt")
+    analyze("../inputs/day_7.txt")
