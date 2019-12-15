@@ -1,3 +1,5 @@
+import math
+from collections import defaultdict
 
 
 def is_asteroid(x, y, stars):
@@ -15,21 +17,40 @@ def calculate_seen(x, y, star_map: list) -> int:
     return out
 
 
+def distance(x_1, y_1, x, y):
+    return math.sqrt((y-y_1)**2 + (x-x_1)**2)
+
+
 def analyze(file):
     stars = []
     with open(file) as f:
         for line in f:
             stars.append([i for i in line.strip()])
 
-    maximum = 0
-    for y, row in enumerate(stars):
-        for x, elem in enumerate(row):
-            if is_asteroid(x, y, stars):
-                seen = calculate_seen(x, y, stars.copy())
-                if seen >= maximum:
-                    maximum = seen
-    print(maximum)
+    height = len(stars)
+    width = len(stars[0])
+    asteroids = [(x, y) for x in range(width) for y in range(height) if stars[y][x] == "#"]
+
+    slopes = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    seen = {}
+    for x_1, y_1 in asteroids:
+        for x, y in asteroids:
+            if not (x_1 == x and y_1 == y):
+                if y_1 > y:
+                    positive = 1
+                elif y_1 < y:
+                    positive = -1
+                elif x_1 > x:
+                    positive = 0
+                if x_1 == x:
+                    slope = math.inf
+                else:
+                    slope = (y_1 - y) / (x_1 - x)
+                slopes[(x_1, y_1)][positive][slope].append((x, y))
+        seen[(x_1, y_1)] = len(slopes[(x_1, y_1)][-1]) + len(slopes[(x_1, y_1)][1]) + len(slopes[(x_1, y_1)][0])
+
+    print(max([seen[(x, y)] for x, y in asteroids]))
 
 
 if __name__ == '__main__':
-    analyze("../inputs/day_10_t.txt")
+    analyze("../inputs/day_10.txt")
