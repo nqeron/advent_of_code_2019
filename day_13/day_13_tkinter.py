@@ -105,6 +105,12 @@ def run_int_comp(opcodes):
             raise Exception("Unrecognized opcode")
 
 
+class IntComp:
+
+    def __init__(self, opcodes):
+        self.int_comp = run_int_comp(opcodes)
+
+
 def analyze(file):
     with open(file) as f:
         opcodes = [int(i) for i in f.readline().strip().split(",")]
@@ -137,11 +143,6 @@ def analyze(file):
             break
         else:
             new_screen = True
-
-
-if __name__ == '__main__':
-    # print(get_input_from_joy())
-    analyze("inputs/day_13.txt")
 
 
 def run_comp(comp, screen, joy_pos):
@@ -186,7 +187,7 @@ def draw_screen(canv, screen):
     return True
 
 
-def do_for_key(event: Event, canv, comp, screen, initial_ops):
+def do_for_key(event: Event, canv, comp: IntComp, screen, initial_ops):
     keysym = str(event.keysym).lower()
 
     if keysym == "w" or keysym == "i" or keysym == "up" or keysym == "space":
@@ -196,15 +197,15 @@ def do_for_key(event: Event, canv, comp, screen, initial_ops):
     elif keysym == "d" or keysym == "l" or keysym == "right":
         joy_pos = 1
     elif keysym == "r":
-        comp = run_int_comp(initial_ops.copy())
+        comp.int_comp = run_int_comp(initial_ops.copy())
         screen = defaultdict(lambda: defaultdict(lambda: 0))
-        run_comp(comp, screen, None)
+        run_comp(comp.int_comp, screen, None)
         draw_screen(canv, screen)
         return
     else:
         return
 
-    run_comp(comp, screen, joy_pos)
+    run_comp(comp.int_comp, screen, joy_pos)
 
     draw_screen(canv, screen)
 
@@ -215,7 +216,7 @@ def run_app(file):
     opcodes[0] = 2
     initial_ops = opcodes.copy()
 
-    comp = run_int_comp(opcodes)
+    comp = IntComp(opcodes)
     screen = defaultdict(lambda: defaultdict(lambda: 0))
 
     master = Tk()
@@ -223,7 +224,7 @@ def run_app(file):
     canv = Canvas(master, width=500, height=500)
     canv.pack()
 
-    run_comp(comp, screen, None)
+    run_comp(comp.int_comp, screen, None)
     draw_screen(canv, screen)
 
     canv.bind("<1>", lambda event: canv.focus_set())
