@@ -27,7 +27,7 @@ def get_dest_from_opcodes(opcodes, pos, mode, rel_base) -> int:
 
 
 def run_int_comp(opcodes):
-    opcodes += [0] * 10000
+    opcodes += [0] * 100000
     pos = 0
     rel_base = 0
     while opcodes[pos] != 99:
@@ -104,11 +104,14 @@ def run_int_comp(opcodes):
 def analyze(file):
     with open(file) as f:
         opcodes = [int(i) for i in f.readline().strip().split(",")]
+    opcodes[0] = 2
     comp = run_int_comp(opcodes)
     screen = defaultdict(lambda: 0)
     while True:
         try:
             x = next(comp)
+            if x is None:
+                break
             y = next(comp)
             tile = next(comp)
         except StopIteration:
@@ -117,6 +120,7 @@ def analyze(file):
             screen[(x, y)] = tile
 
     print(sum([1 for t in screen.values() if t == 2]))
+    print([t for t in screen if screen[t] == 4])
 
 
 if __name__ == '__main__':

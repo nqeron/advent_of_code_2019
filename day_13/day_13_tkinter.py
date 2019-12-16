@@ -1,3 +1,6 @@
+from tkinter import *
+
+
 from collections import defaultdict
 
 
@@ -102,36 +105,6 @@ def run_int_comp(opcodes):
             raise Exception("Unrecognized opcode")
 
 
-def get_input_from_joy() -> int:
-    move = input().lower()
-    if move == "w" or move == "i":
-        return 0
-    elif move == "a" or move == "j":
-        return -1
-    elif move == "d" or move == "l":
-        return 1
-    else:
-        raise Exception("Unknown Command")
-
-
-def get_char(col):
-    if col == 0:
-        return ' '
-    elif col == 1:
-        return '|'
-    elif col == 2:
-        return '#'
-    elif col == 3:
-        return '-'
-    elif col == 4:
-        return '0'
-
-
-def print_screen(screen):
-    for row in screen:
-        print([get_char(screen[row][col]) for col in screen[row]])
-
-
 def analyze(file):
     with open(file) as f:
         opcodes = [int(i) for i in f.readline().strip().split(",")]
@@ -158,9 +131,8 @@ def analyze(file):
                 screen[y][x] = tile
         if sum([1 for k in screen for j in screen[k] if screen[k][j] == 2]) <= 0:
             break
-        print_screen(screen)
         try:
-            x = comp.send(get_input_from_joy())
+            x = comp.send(0)
         except StopIteration:
             break
         else:
@@ -170,3 +142,95 @@ def analyze(file):
 if __name__ == '__main__':
     # print(get_input_from_joy())
     analyze("inputs/day_13.txt")
+
+
+def run_comp(comp, screen, joy_pos):
+    new_screen = True
+    while True:
+        try:
+            if not new_screen:
+                x = next(comp)
+                if x is None:
+                    break
+            else:
+                x = comp.send(joy_pos)
+                new_screen = False
+            y = next(comp)
+            if new_screen and y is None:
+                break
+            tile = next(comp)
+        except StopIteration:
+            break
+        else:
+            screen[y][x] = tile
+
+
+def draw_screen(canv, screen):
+    canv.delete("all")
+    for y in screen:
+        for x in screen[y]:
+            if x == -1 and y == 0:
+                canv.create_text(30, 10, text="Score: {}".format(screen[y][x]))
+            else:
+                code = screen[y][x]
+                if code == 0:
+                    pass  # draw nothing?
+                elif code == 1:
+                    canv.create_rectangle(x*10+5, y*10+20, x*10+15, y*10+30, fill=["black"])
+                elif code == 2:
+                    canv.create_rectangle(x*10+5, y*10+20, x*10+15, y*10+30, fill=["green"])
+                elif code == 3:
+                    canv.create_rectangle(x*10+5, y*10+20, x*10+15, y*10+30, fill=["gray"])
+                elif code == 4:
+                    canv.create_oval(x*10+5, y*10+20, x*10+15, y*10+30, fill=["blue"])
+    return True
+
+
+def do_for_key(event: Event, canv, comp, screen, initial_ops):
+    keysym = str(event.keysym).lower()
+
+    if keysym == "w" or keysym == "i" or keysym == "up" or keysym == "space":
+        joy_pos = 0  # neutral
+    elif keysym == "a" or keysym == "j" or keysym == "left":
+        joy_pos = -1
+    elif keysym == "d" or keysym == "l" or keysym == "right":
+        joy_pos = 1
+    elif keysym == "r":
+        comp = run_int_comp(initial_ops.copy())
+        screen = defaultdict(lambda: defaultdict(lambda: 0))
+        run_comp(comp, screen, None)
+        draw_screen(canv, screen)
+        return
+    else:
+        return
+
+    run_comp(comp, screen, joy_pos)
+
+    draw_screen(canv, screen)
+
+
+def run_app(file):
+    with open(file) as f:
+        opcodes = [int(i) for i in f.readline().strip().split(",")]
+    opcodes[0] = 2
+    initial_ops = opcodes.copy()
+
+    comp = run_int_comp(opcodes)
+    screen = defaultdict(lambda: defaultdict(lambda: 0))
+
+    master = Tk()
+
+    canv = Canvas(master, width=500, height=500)
+    canv.pack()
+
+    run_comp(comp, screen, None)
+    draw_screen(canv, screen)
+
+    canv.bind("<1>", lambda event: canv.focus_set())
+    canv.bind("<Key>", lambda event: do_for_key(event, canv, comp, screen, initial_ops.copy()))
+
+    master.mainloop()
+
+
+if __name__ == '__main__':
+    run_app("inputs/day_13.txt")
