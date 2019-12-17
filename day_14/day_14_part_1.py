@@ -23,24 +23,25 @@ def analyze(file):
         next_amount = amount_stack.pop()
         if next_production.name == "ORE":
             total_ore += next_amount // next_production.quantity
-            current_amount[next_production.name] += next_production.quantity
+            current_amount[next_production.name] += next_amount
             continue
         else:
             produced = int(chemistry[next_production.name][-1])
-            crafted = next_amount // produced + (1 * (0 if next_amount % produced == 0 else 1))
+            needed = next_amount - current_amount[next_production.name]
+            crafted = needed // produced + (1 * (0 if needed % produced == 0 else 1))
 
             add_to_produce = chemistry[next_production.name][:-1]
             to_produce.extend(add_to_produce)
 
             for i in add_to_produce:
-                to_craft_i = i.quantity * crafted - current_amount[i.name]
-                current_amount[i.name] += to_craft_i
+                to_craft_i = i.quantity * crafted  # - current_amount[i.name]
+                # current_amount[i.name] += to_craft_i
                 amount_stack.append(to_craft_i)
 
-            current_amount[next_production.name] += crafted
+            current_amount[next_production.name] += crafted * produced - needed - current_amount[next_production.name]
             prev_item = next_production
-    print(current_amount)
+    print(current_amount["ORE"])
 
 
 if __name__ == '__main__':
-    analyze("inputs/day_14_test.txt")
+    analyze("inputs/day_14.txt")
