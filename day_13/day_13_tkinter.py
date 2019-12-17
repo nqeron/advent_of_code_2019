@@ -1,5 +1,5 @@
 from tkinter import *
-
+import time
 
 from collections import defaultdict
 
@@ -111,6 +111,19 @@ class IntComp:
         self.int_comp = run_int_comp(opcodes)
 
 
+class Screen:
+
+    def __init__(self):
+        self.screen = defaultdict(lambda: defaultdict(lambda: 0))
+
+
+class AI:
+
+    def __init__(self):
+        self.pos_ball = 0
+        self.pos_paddle = 0
+
+
 def analyze(file):
     with open(file) as f:
         opcodes = [int(i) for i in f.readline().strip().split(",")]
@@ -145,7 +158,7 @@ def analyze(file):
             new_screen = True
 
 
-def run_comp(comp, screen, joy_pos):
+def run_comp(comp, screen, joy_pos, ai: AI):
     new_screen = True
     while True:
         try:
@@ -163,6 +176,10 @@ def run_comp(comp, screen, joy_pos):
         except StopIteration:
             break
         else:
+            if tile == 4:
+                ai.pos_ball = x
+            elif tile == 3:
+                ai.pos_paddle = x
             screen[y][x] = tile
 
 
@@ -198,16 +215,30 @@ def do_for_key(event: Event, canv, comp: IntComp, screen, initial_ops):
         joy_pos = 1
     elif keysym == "r":
         comp.int_comp = run_int_comp(initial_ops.copy())
-        screen = defaultdict(lambda: defaultdict(lambda: 0))
-        run_comp(comp.int_comp, screen, None)
-        draw_screen(canv, screen)
-        return
+        screen.screen = defaultdict(lambda: defaultdict(lambda: 0))
+        joy_pos = None
     else:
         return
 
-    run_comp(comp.int_comp, screen, joy_pos)
+    run_comp(comp.int_comp, screen.screen, joy_pos)
 
-    draw_screen(canv, screen)
+    draw_screen(canv, screen.screen)
+
+
+def play_ball(canv, comp, screen, ai: AI):
+
+    joy_pos = 0
+    while sum([1 for y in screen.screen for x in screen.screen[y] if screen.screen[y][x] == 2]) != 0:
+        run_comp(comp.int_comp, screen.screen, joy_pos, ai)
+        draw_screen(canv, screen.screen)
+        # time.sleep(10)
+        if ai.pos_paddle < ai.pos_ball:
+            joy_pos = 1
+        elif ai.pos_paddle > ai.pos_ball:
+            joy_pos = -1
+        else:
+            joy_pos = 0
+        yield
 
 
 def run_app(file):
@@ -217,18 +248,23 @@ def run_app(file):
     initial_ops = opcodes.copy()
 
     comp = IntComp(opcodes)
-    screen = defaultdict(lambda: defaultdict(lambda: 0))
+    screen = Screen()
 
     master = Tk()
 
     canv = Canvas(master, width=500, height=500)
     canv.pack()
 
-    run_comp(comp.int_comp, screen, None)
-    draw_screen(canv, screen)
+    ai = AI()
+
+    run_comp(comp.int_comp, screen.screen, None, ai)
+    draw_screen(canv, screen.screen)
+
+    ai_ball = play_ball(canv, comp, screen, ai)
 
     canv.bind("<1>", lambda event: canv.focus_set())
-    canv.bind("<Key>", lambda event: do_for_key(event, canv, comp, screen, initial_ops.copy()))
+    canv.bind("<Key>", lambda event: next(ai_ball))
+    # lambda event: do_for_key(event, canv, comp, screen, initial_ops.copy()))
 
     master.mainloop()
 
