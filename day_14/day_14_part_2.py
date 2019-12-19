@@ -14,6 +14,12 @@ def can_be_made(reactions: typing.List[Reaction], current_amount) -> int:
                 if react_dict[elem] > 0])
 
 
+def needed_to_make(product, to_make_product, chemistry) -> int:
+    react_dict = defaultdict(lambda: 0)
+    react_dict.update({i.name: i.quantity for i in chemistry[to_make_product][:-1]})
+    return react_dict[product]
+
+
 def analyze(file, given_ore):
     line_matcher = re.compile(r"(\d+) (\w+)")
     chemistry = {}
@@ -53,16 +59,42 @@ def analyze(file, given_ore):
 
             current_amount[next_production.name] += crafted * produced - needed - current_amount[next_production.name]
 
-    print(distance_to_fuel)
+    print(current_amount)
     first_crafts = given_ore // current_amount["ORE"]
     current_amount.update({i: current_amount[i] * first_crafts for i in current_amount})
     current_amount["FUEL"] += first_crafts
     current_amount["ORE"] = given_ore - current_amount["ORE"]
-    # print(current_amount)
+    print(current_amount)
 
-    next_product = min([(product, can_be_made(chemistry[product][:-1], current_amount)) for product in chemistry],
-                       key=lambda x: distance_to_fuel[x[0]] if x[1] > 0 else math.inf)
+    # to_make_product = "FUEL"
+    while True:
+        print(current_amount)
+        print([(product, can_be_made(chemistry[product][:-1], current_amount),
+                needed_to_make(product, to_make_product, chemistry))
+               for product in chemistry for to_make_product in chemistry
+               if product in set(i.name for i in chemistry[to_make_product][:-1])])
+        next_product = min([(product, can_be_made(chemistry[product][:-1], current_amount),
+                             needed_to_make(product, to_make_product, chemistry), to_make_product)
+                            for product in chemistry for to_make_product in chemistry
+                            if product == "FUEL" or product in set(i.name for i in chemistry[to_make_product][:-1])],
+                           key=lambda x: distance_to_fuel[x[0]] * current_amount[x[0]] if x[1] > x[2] > 0 else math.inf)
+        print(next_product)
+        if next_product[1] <= 0:
+            break
+        reagent = next_product[0]
+        have = current_amount[reagent]
+        needed_for_reaction = next_product[2]
+        production_amount = int(chemistry[reagent][-1])
+        can_make = next_product[1]
+        # crafts = needed_for_reaction // production_amount +\
+        #          (1 * (0 if needed_for_reaction % production_amount == 0 else 1))   # - have
+        crafts = can_make // production_amount + (1 * (0 if can_make % production_amount == 0 else 1))
+        current_amount[reagent] += can_make
+        for r in chemistry[reagent][:-1]:
+            current_amount[r.name] -= crafts * r.quantity
+        to_make_product = reagent
+    print(current_amount["FUEL"])
 
 
 if __name__ == '__main__':
-    analyze("inputs/day_14_test2.txt", 1000)
+    analyze("inputs/day_14_test3.txt", 1_000_000_000_000)
