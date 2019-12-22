@@ -1,5 +1,6 @@
 from enum import Enum
 from collections import defaultdict
+from copy import copy
 
 
 def get_val_from_opcodes(opcodes, pos, mode, rel_base) -> int:
@@ -123,34 +124,70 @@ class Direction(Enum):
 #         elif dir in set(["d", "l"]):
 #             return Direction.EAST
 
+def turn_left(pos, terrain, running):
+    pass
+
+
 def get_input(terrain, pos, running: Direction, prev_status) -> Direction:
     if prev_status == 1:
+        return turn_left(pos, terrain, running)
+    if wall_on_right(pos, terrain, running):
         return running
-    if prev_status == 0:
-        while True:
-            if running is Direction.WEST:
-                x, y = pos[0], pos[1] - 1
-                running = Direction.NORTH
-            elif running is Direction.EAST:
-                x, y = pos[0], pos[1] + 1
-                running = Direction.SOUTH
-            elif running is Direction.NORTH:
-                x, y = pos[0] + 1, pos[1]
-                running = Direction.EAST
-            elif running is Direction.SOUTH:
-                x, y = pos[0] - 1, pos[1]
-                running = Direction.WEST
-            if terrain[(x, y)] == 3 or terrain[(x, y)] == 2:
-                break
-        return running
+    else:
+        return turn_right(pos, running, terrain)
+    # if prev_status == 1:
+    #     x, y = get_running_pos(running, pos)
+    #     if terrain[(x, y)] == 0:
+    #         return turn_right(pos, running, terrain)
+    #     return running
+    # if prev_status == 0:
+    #     return turn_right(pos, running, terrain)
 
 
-def get_char(terrain, x, y, pos):
+def turn_right(pos, running, terrain):
+    if running is Direction.WEST:
+        x, y = pos[0], pos[1] - 1
+        running = Direction.NORTH
+    elif running is Direction.EAST:
+        x, y = pos[0], pos[1] + 1
+        running = Direction.SOUTH
+    elif running is Direction.NORTH:
+        x, y = pos[0] + 1, pos[1]
+        running = Direction.EAST
+    elif running is Direction.SOUTH:
+        x, y = pos[0] - 1, pos[1]
+        running = Direction.EAST
+        # if terrain[(x, y)] == 3 or terrain[(x, y)] == 2 or (counter >= 4 and terrain[(x, y)] == 0):
+        #     break
+        # counter += 1
+    return running
+
+
+def wall_on_right(pos, terrain, direction: Direction):
+    if direction is Direction.WEST:
+        x, y = pos[0], pos[1] - 1
+    elif direction is Direction.EAST:
+        x, y = pos[0], pos[1] + 1
+    elif direction is Direction.NORTH:
+        x, y = pos[0] + 1, pos[1]
+    elif direction is Direction.SOUTH:
+        x, y = pos[0] - 1, pos[1]
+    return terrain[(x, y)] == 1
+
+
+def get_char(terrain, x, y, pos, direction: Direction):
     if pos[0] == x and pos[1] == y:
-        return '+'
+        if direction is Direction.NORTH:
+            return '^'
+        elif direction is Direction.SOUTH:
+            return 'v'
+        elif direction is Direction.WEST:
+            return '<'
+        elif direction is Direction.EAST:
+            return '>'
     code = terrain[(x, y)]
     if code == 0:
-        return ' '
+        return '.'
     elif code == 1:
         return '#'
     elif code == 2:
@@ -159,14 +196,14 @@ def get_char(terrain, x, y, pos):
         return '?'
 
 
-def print_terrain(terrain, pos):
+def print_terrain(terrain, pos, direction):
     left = min([point[0] for point in terrain.keys() if terrain[point] != 3]) - 1
     right = max([point[0] for point in terrain.keys() if terrain[point] != 3]) + 1
     top = min([point[1] for point in terrain.keys() if terrain[point] != 3]) - 1
     bottom = max([point[1] for point in terrain.keys() if terrain[point] != 3]) + 1
 
     for y in range(top, bottom + 1):
-        print([get_char(terrain, x, y, pos) for x in range(left, right + 1)])
+        print("".join([get_char(terrain, x, y, pos, direction) for x in range(left, right + 1)]))
 
 
 def analyze(file):
@@ -184,14 +221,7 @@ def analyze(file):
         running = direction
         status = comp.send(direction.value)
         print(status)
-        if direction is Direction.NORTH:
-            x, y = pos[0], pos[1] - 1
-        elif direction is Direction.SOUTH:
-            x, y = pos[0], pos[1] + 1
-        elif direction is Direction.WEST:
-            x, y = pos[0] - 1, pos[1]
-        elif direction is Direction.EAST:
-            x, y = pos[0] + 1, pos[1]
+        x, y = get_running_pos(direction, pos)
 
         if status == 0:
             terrain[(x, y)] = 1  # 1 is a wall
@@ -201,9 +231,21 @@ def analyze(file):
         elif status == 2:
             pos = (x, y)
             terrain[(x, y)] = 2  # 2 is an oxygen tank
-        print_terrain(terrain, pos)
+        print_terrain(terrain, pos, direction)
         prev_status = status
         next(comp)
+
+
+def get_running_pos(direction, pos):
+    if direction is Direction.NORTH:
+        x, y = pos[0], pos[1] - 1
+    elif direction is Direction.SOUTH:
+        x, y = pos[0], pos[1] + 1
+    elif direction is Direction.WEST:
+        x, y = pos[0] - 1, pos[1]
+    elif direction is Direction.EAST:
+        x, y = pos[0] + 1, pos[1]
+    return x, y
 
 
 if __name__ == '__main__':
