@@ -154,14 +154,61 @@ def turn_left(running):
     return running
 
 
+def next_pos_is_empty(terrain, pos, direction: Direction) -> bool:
+    x, y = pos
+    if direction is Direction.NORTH:
+        x, y = x, y - 1
+    elif direction is Direction.SOUTH:
+        x, y = x, y + 1
+    elif direction is Direction.WEST:
+        x, y = x - 1, y
+    elif direction is Direction.EAST:
+        x, y = x + 1, y
+    return terrain[(x, y)] is Tile.Unknown
+
+
+def next_on_right(terrain, pos, running: Direction) -> Tile:
+    x, y = pos
+    if running is Direction.NORTH:
+        x, y = x + 1, y
+    elif running is Direction.SOUTH:
+        x, y = x - 1, y
+    elif running is Direction.WEST:
+        x, y = x, y - 1
+    elif running is Direction.EAST:
+        x, y = x, y + 1
+    return terrain[(x, y)]
+
+
+def next_on_left(terrain, pos, running):
+    x, y = pos
+    if running is Direction.NORTH:
+        x, y = x - 1, y
+    elif running is Direction.SOUTH:
+        x, y = x + 1, y
+    elif running is Direction.WEST:
+        x, y = x, y + 1
+    elif running is Direction.EAST:
+        x, y = x, y - 1
+    return terrain[(x, y)]
+
+
 def get_input(terrain, pos, running: Direction, prev_status, steps) -> Direction:
     if prev_status == 0:
+        if next_on_left(terrain, pos, running) is Tile.Empty:
+            steps -= 1
         return turn_left(running), steps
-    x, y = pos[0], pos[1]
-    steps += 1
-    if terrain[(x, y)] is Tile.Empty or terrain[(x, y)] is Tile.Unknown:
-        return turn_right(running), steps
-    return running, steps
+    # steps += 1
+    # if terrain[(x, y)] is Tile.Unknown:
+    #     steps += 1
+    #     return turn_right(running), steps
+    # steps -= 1
+    right_tile = next_on_right(terrain, pos, running)
+    if right_tile in set([Tile.Wall, Tile.Unknown]):
+        steps += 1
+    elif right_tile is Tile.Empty:
+        steps -= 1
+    return turn_right(running), steps
 
 
 def get_char(terrain, x, y, pos, direction: Direction):
