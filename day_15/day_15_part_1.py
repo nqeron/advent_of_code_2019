@@ -1,6 +1,5 @@
 from enum import Enum
 from collections import defaultdict
-from copy import copy
 
 
 def get_val_from_opcodes(opcodes, pos, mode, rel_base) -> int:
@@ -111,6 +110,13 @@ class Direction(Enum):
     EAST = 4
 
 
+class Tile(Enum):
+    Empty = 0
+    Wall = 1
+    Oxygen = 2
+    Unknown = 3
+
+
 # def get_input() -> Direction:
 #     while True:
 #         dir = input()
@@ -124,55 +130,85 @@ class Direction(Enum):
 #         elif dir in set(["d", "l"]):
 #             return Direction.EAST
 
-def turn_left(pos, terrain, running):
-    pass
-
-
-def get_input(terrain, pos, running: Direction, prev_status) -> Direction:
-    if prev_status == 1:
-        return turn_left(pos, terrain, running)
-    if wall_on_right(pos, terrain, running):
-        return running
-    else:
-        return turn_right(pos, running, terrain)
-    # if prev_status == 1:
-    #     x, y = get_running_pos(running, pos)
-    #     if terrain[(x, y)] == 0:
-    #         return turn_right(pos, running, terrain)
-    #     return running
-    # if prev_status == 0:
-    #     return turn_right(pos, running, terrain)
-
-
-def turn_right(pos, running, terrain):
+def turn_right(running):
     if running is Direction.WEST:
-        x, y = pos[0], pos[1] - 1
         running = Direction.NORTH
     elif running is Direction.EAST:
-        x, y = pos[0], pos[1] + 1
         running = Direction.SOUTH
     elif running is Direction.NORTH:
-        x, y = pos[0] + 1, pos[1]
         running = Direction.EAST
     elif running is Direction.SOUTH:
-        x, y = pos[0] - 1, pos[1]
-        running = Direction.EAST
-        # if terrain[(x, y)] == 3 or terrain[(x, y)] == 2 or (counter >= 4 and terrain[(x, y)] == 0):
-        #     break
-        # counter += 1
+        running = Direction.WEST
     return running
 
 
-def wall_on_right(pos, terrain, direction: Direction):
-    if direction is Direction.WEST:
-        x, y = pos[0], pos[1] - 1
-    elif direction is Direction.EAST:
-        x, y = pos[0], pos[1] + 1
-    elif direction is Direction.NORTH:
-        x, y = pos[0] + 1, pos[1]
+def turn_left(running):
+    if running is Direction.WEST:
+        running = Direction.SOUTH
+    elif running is Direction.EAST:
+        running = Direction.NORTH
+    elif running is Direction.NORTH:
+        running = Direction.WEST
+    elif running is Direction.SOUTH:
+        running = Direction.EAST
+    return running
+
+
+def next_pos_is_empty(terrain, pos, direction: Direction) -> bool:
+    x, y = pos
+    if direction is Direction.NORTH:
+        x, y = x, y - 1
     elif direction is Direction.SOUTH:
-        x, y = pos[0] - 1, pos[1]
-    return terrain[(x, y)] == 1
+        x, y = x, y + 1
+    elif direction is Direction.WEST:
+        x, y = x - 1, y
+    elif direction is Direction.EAST:
+        x, y = x + 1, y
+    return terrain[(x, y)] is Tile.Unknown
+
+
+def next_on_right(terrain, pos, running: Direction) -> Tile:
+    x, y = pos
+    if running is Direction.NORTH:
+        x, y = x + 1, y
+    elif running is Direction.SOUTH:
+        x, y = x - 1, y
+    elif running is Direction.WEST:
+        x, y = x, y - 1
+    elif running is Direction.EAST:
+        x, y = x, y + 1
+    return terrain[(x, y)]
+
+
+def next_on_left(terrain, pos, running):
+    x, y = pos
+    if running is Direction.NORTH:
+        x, y = x - 1, y
+    elif running is Direction.SOUTH:
+        x, y = x + 1, y
+    elif running is Direction.WEST:
+        x, y = x, y + 1
+    elif running is Direction.EAST:
+        x, y = x, y - 1
+    return terrain[(x, y)]
+
+
+def get_input(terrain, pos, running: Direction, prev_status, steps) -> Direction:
+    if prev_status == 0:
+        if next_on_left(terrain, pos, running) is Tile.Empty:
+            steps -= 1
+        return turn_left(running), steps
+    # steps += 1
+    # if terrain[(x, y)] is Tile.Unknown:
+    #     steps += 1
+    #     return turn_right(running), steps
+    # steps -= 1
+    right_tile = next_on_right(terrain, pos, running)
+    if right_tile in set([Tile.Wall, Tile.Unknown]):
+        steps += 1
+    elif right_tile is Tile.Empty:
+        steps -= 1
+    return turn_right(running), steps
 
 
 def get_char(terrain, x, y, pos, direction: Direction):
@@ -185,25 +221,27 @@ def get_char(terrain, x, y, pos, direction: Direction):
             return '<'
         elif direction is Direction.EAST:
             return '>'
+    elif x == 0 and y == 0:
+        return "S"
     code = terrain[(x, y)]
-    if code == 0:
-        return '.'
-    elif code == 1:
+    if code is Tile.Empty:
+        return ' '
+    elif code is Tile.Wall:
         return '#'
-    elif code == 2:
+    elif code is Tile.Oxygen:
         return 'O'
-    elif code == 3:
+    elif code is Tile.Unknown:
         return '?'
 
 
 def print_terrain(terrain, pos, direction):
-    left = min([point[0] for point in terrain.keys() if terrain[point] != 3]) - 1
-    right = max([point[0] for point in terrain.keys() if terrain[point] != 3]) + 1
-    top = min([point[1] for point in terrain.keys() if terrain[point] != 3]) - 1
-    bottom = max([point[1] for point in terrain.keys() if terrain[point] != 3]) + 1
+    left = min([point[0] for point in terrain.keys() if terrain[point] is not Tile.Unknown]) - 1
+    right = max([point[0] for point in terrain.keys() if terrain[point] is not Tile.Unknown]) + 1
+    top = min([point[1] for point in terrain.keys() if terrain[point] is not Tile.Unknown]) - 1
+    bottom = max([point[1] for point in terrain.keys() if terrain[point] is not Tile.Unknown]) + 1
 
     for y in range(top, bottom + 1):
-        print("".join([get_char(terrain, x, y, pos, direction) for x in range(left, right + 1)]))
+        print(''.join([get_char(terrain, x, y, pos, direction) for x in range(left, right + 1)]))
 
 
 def analyze(file):
@@ -212,40 +250,38 @@ def analyze(file):
     comp = run_int_comp(opcodes)
     next(comp)
     pos = (0, 0)
-    terrain = defaultdict(lambda: 3)  # nothing by default
-    terrain[(0, 0)] = 0
+    terrain = defaultdict(lambda: Tile.Unknown)  # nothing by default
+    terrain[(0, 0)] = Tile.Empty
     prev_status = 1
     running = Direction.WEST
-    while terrain[pos] != 2:
-        direction = get_input(terrain, pos, running, prev_status)
+    steps = 0
+    while terrain[pos] is not Tile.Oxygen:
+        direction, steps = get_input(terrain, pos, running, prev_status, steps)
         running = direction
         status = comp.send(direction.value)
         print(status)
-        x, y = get_running_pos(direction, pos)
+        if direction is Direction.NORTH:
+            x, y = pos[0], pos[1] - 1
+        elif direction is Direction.SOUTH:
+            x, y = pos[0], pos[1] + 1
+        elif direction is Direction.WEST:
+            x, y = pos[0] - 1, pos[1]
+        elif direction is Direction.EAST:
+            x, y = pos[0] + 1, pos[1]
 
         if status == 0:
-            terrain[(x, y)] = 1  # 1 is a wall
+            terrain[(x, y)] = Tile.Wall  # 1 is a wall
         elif status == 1:
             pos = (x, y)
-            terrain[(x, y)] = 0
+            terrain[(x, y)] = Tile.Empty
         elif status == 2:
             pos = (x, y)
-            terrain[(x, y)] = 2  # 2 is an oxygen tank
-        print_terrain(terrain, pos, direction)
+            terrain[(x, y)] = Tile.Oxygen  # 2 is an oxygen tank
+        print_terrain(terrain, pos, running)
+        print(steps)
         prev_status = status
         next(comp)
-
-
-def get_running_pos(direction, pos):
-    if direction is Direction.NORTH:
-        x, y = pos[0], pos[1] - 1
-    elif direction is Direction.SOUTH:
-        x, y = pos[0], pos[1] + 1
-    elif direction is Direction.WEST:
-        x, y = pos[0] - 1, pos[1]
-    elif direction is Direction.EAST:
-        x, y = pos[0] + 1, pos[1]
-    return x, y
+    print(steps)
 
 
 if __name__ == '__main__':
