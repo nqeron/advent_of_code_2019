@@ -164,7 +164,7 @@ def next_pos_is_empty(terrain, pos, direction: Direction) -> bool:
         x, y = x - 1, y
     elif direction is Direction.EAST:
         x, y = x + 1, y
-    return terrain[(x, y)] is Tile.Unknown
+    return terrain[(x, y)] is Tile.Empty
 
 
 def next_on_right(terrain, pos, running: Direction) -> Tile:
@@ -195,17 +195,16 @@ def next_on_left(terrain, pos, running):
 
 def get_input(terrain, pos, running: Direction, prev_status, steps) -> Direction:
     if prev_status == 0:
-        if next_on_left(terrain, pos, running) is Tile.Empty:
+        left_tile = next_on_left(terrain, pos, running)
+        if left_tile in set([Tile.Empty, Tile.Wall]):
             steps -= 1
+        elif left_tile is Tile.Unknown:
+            steps += 1
         return turn_left(running), steps
-    # steps += 1
-    # if terrain[(x, y)] is Tile.Unknown:
-    #     steps += 1
-    #     return turn_right(running), steps
-    # steps -= 1
     right_tile = next_on_right(terrain, pos, running)
     if right_tile in set([Tile.Wall, Tile.Unknown]):
-        steps += 1
+        if not next_pos_is_empty(terrain, pos, running):
+            steps += 1
     elif right_tile is Tile.Empty:
         steps -= 1
     return turn_right(running), steps
