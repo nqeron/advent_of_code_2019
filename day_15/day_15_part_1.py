@@ -196,17 +196,11 @@ def next_on_left(terrain, pos, running):
 def get_input(terrain, pos, running: Direction, prev_status, steps) -> Direction:
     if prev_status == 0:
         left_tile = next_on_left(terrain, pos, running)
-        if left_tile in set([Tile.Empty, Tile.Wall]):
+        if left_tile is Tile.Empty:
             steps -= 1
         elif left_tile is Tile.Unknown:
             steps += 1
         return turn_left(running), steps
-    right_tile = next_on_right(terrain, pos, running)
-    if right_tile in set([Tile.Wall, Tile.Unknown]):
-        if not next_pos_is_empty(terrain, pos, running):
-            steps += 1
-    elif right_tile is Tile.Empty:
-        steps -= 1
     return turn_right(running), steps
 
 
@@ -280,7 +274,7 @@ def analyze(file):
         print(steps)
         prev_status = status
         next(comp)
-    print(steps)
+    print(steps+1)
 
 
 if __name__ == '__main__':
