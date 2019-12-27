@@ -105,44 +105,69 @@ def run_int_comp(opcodes):
 def analyze(file):
     with open(file) as f:
         opcodes = [int(i) for i in f.readline().strip().split(",")]
+    opcodes[0] = 2
     comp = run_int_comp(opcodes)
+    next(comp)
+
+    main_movement = "A,B,A,C,B,A,C,A,C,B"
+    routine_a = "L,12,L,8,L,8"
+    routine_b = "L,12,R,4,L,12,R,6"
+    routine_c = "R,4,L,12,L,12,R,6"
+    continuous_feed = "n"
 
     line = ""
-    x, y = 0, 0
-    camera = defaultdict(lambda: '.')
     while True:
         try:
-            tile = next(comp)
+            # latest = result
+            result = next(comp)
+            if result is None:
+                break
+            if result == 10:
+                print(line)
+                line = ""
+            else:
+                line += chr(result)
+        except StopIteration:
+            break
+
+    for elem in [ord(c) for c in main_movement] + [10]:
+        x = comp.send(elem)
+        # print(x)
+    print_input(comp, x)
+    for elem in [ord(c) for c in routine_a] + [10]:
+        x = comp.send(elem)
+    print_input(comp, x)
+    for elem in [ord(c) for c in routine_b] + [10]:
+        x = comp.send(elem)
+    print_input(comp, x)
+    for elem in [ord(c) for c in routine_c] + [10]:
+        x = comp.send(elem)
+    print_input(comp, x)
+    for elem in [ord(c) for c in continuous_feed] + [10]:
+        latest = comp.send(elem)
+    print_input(comp, latest)
+    # latest, result = None, None
+    print(latest)
+
+
+def print_input(comp, x):
+    line = chr(x)
+    while True:
+        try:
+            out = next(comp)
         except StopIteration:
             break
         else:
-            if tile == 10:
-                # print(line)
+            if out is None:
+                break
+            if out == 10:
+                print(line)
                 line = ""
-                y += 1
-                x = 0
             else:
-                camera[(x, y)] = chr(tile)
-                line += chr(tile)
-                x += 1
-                width = x
-    height = y
-    print_camera(camera, height, width)
-
-    intersections = 0
-    for pos in camera:
-        if camera[pos] != "#":
-            continue
-        x, y = pos
-        if x - 1 < 0 or x + 1 > width or y - 1 < 0 or y + 1 > height:
-            continue
-        left = (x - 1, y)
-        right = (x + 1, y)
-        up = (x, y - 1)
-        down = (x, y + 1)
-        if camera[up] == "#" and camera[down] == "#" and camera[left] == "#" and camera[right] == "#":
-            intersections += x * y
-    print(intersections)
+                try:
+                    line += chr(out)
+                except ValueError:
+                    print(out)
 
 
 def print_camera(camera, height, width):
